@@ -31,6 +31,7 @@ public:
 
 	int mean_x;
 	int mean_y;
+	double mean_scale = 0;
 
 	int mean_x_in_previous_frame;
 	int mean_y_in_previous_frame;

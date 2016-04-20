@@ -52,6 +52,11 @@ void ParticleFilter::on_newFrame(Mat* m, Mat& lbp) {
 	//thd.join();
 
 	//Draw the tracking rectangle
+	double w = tracking_window_width * (1 + mean_scale);
+	double h = tracking_window_height * (1 + mean_scale);
+	int ww = floor(w);
+	int hh = floor(h);
+
 	Scalar* line_color;
 	if (max_raw_weight > 0.5)
 		line_color = new Scalar(0, 255, 0);
@@ -59,30 +64,13 @@ void ParticleFilter::on_newFrame(Mat* m, Mat& lbp) {
 		line_color = new Scalar(255, 0, 0);
 	else
 		line_color = new Scalar(0, 0, 255);
-	rectangle(*m, Rect(mean_x, mean_y, tracking_window_width, tracking_window_height), *line_color, 3);
+	rectangle(*m, Rect(mean_x, mean_y, ww, hh) & Rect(0, 0, m->cols, m->rows), *line_color, 3);
 
 	//Draw the particles
 	for (int i = 0; i < particles.size(); i++) {
 		Particle* p = &particles[i];
 		line(*m, Point(p->x, p->y), Point(p->x, p->y), Scalar(0, 255, 0), 7);
 	}
-
-	//Todo: Update the histogram
-	int x_end = mean_x + tracking_window_width;
-	int y_end = mean_y + tracking_window_height;
-
-	if (x_end <= mean_x || y_end <= mean_y) {
-		return;
-	}
-
-	Rect rect(Point(mean_x, mean_y), Point(x_end, y_end));
-	//Limit the rect size within the boundary of the image
-	rect = rect & Rect(0, 0, m->cols, m->rows);
-
-	Mat temp = *m;
-	Mat submat = temp(rect);
-	vector<Mat> bgr_channels(3);
-	split(submat, bgr_channels);
 }
 
 void ParticleFilter::set_from_initial_frame(Mat& m, Mat& lbp, int x1, int y1, int x2, int y2) {
@@ -121,14 +109,17 @@ void ParticleFilter::calculate_particles_xy_mean() {
 
 	mean_x = 0;
 	mean_y = 0;
+	mean_scale = 0;
 
 	for (int i = 0; i < particles.size(); i++) {
 		Particle* p = &particles[i];
 		mean_x += p->x;
 		mean_y += p->y;
+		mean_scale += p->scale;
 	}
 	mean_x = mean_x / particles.size();
 	mean_y = mean_y / particles.size();
+	mean_scale = mean_scale / particles.size();
 }
 
 double ParticleFilter::calc_weight_for_particle(Particle* p, Mat& m, Mat& lbp) {
@@ -136,8 +127,13 @@ double ParticleFilter::calc_weight_for_particle(Particle* p, Mat& m, Mat& lbp) {
 	int x = (int)(p->x + 0.5);
 	int y = (int)(p->y + 0.5);
 
-	int x_end = x + tracking_window_width;
-	int y_end = y + tracking_window_height;
+	double w = tracking_window_width * (1 + p->scale);
+	double h = tracking_window_height * (1 + p->scale);
+	int ww = floor(w + 0.5);
+	int hh = floor(h + 0.5);
+
+	int x_end = x + ww;
+	int y_end = y + hh;
 
 	if (x_end <= x || y_end <= y || x_end > m.cols * 1.1 || y_end > m.rows * 1.1) {
 		return 0;
@@ -193,18 +189,21 @@ Particle* ParticleFilter::get_new_particle(vector<double> weighted_distribution)
 			if (number <= weighted_distribution[0]) {
 				new_particle->x = particles[i].x;
 				new_particle->y = particles[i].y;
+				new_particle->scale = particles[i].scale;
 				break;
 			}
 		}
 		else if (i == particles.size() - 1) {
 			new_particle->x = particles[i].x;
 			new_particle->y = particles[i].y;
+			new_particle->scale = particles[i].scale;
 			break;
 		}
 		else {
 			if (number <= weighted_distribution[i] && number > weighted_distribution[i - 1]) {
 				new_particle->x = particles[i].x;
 				new_particle->y = particles[i].y;
+				new_particle->scale = particles[i].scale;
 				break;
 			}
 		}
@@ -215,6 +214,7 @@ Particle* ParticleFilter::get_new_particle(vector<double> weighted_distribution)
 
 void ParticleFilter::move_particle() {
 	normal_distribution<double> distribution(0, 10);
+	normal_distribution<double> distribution_scale(0, 0.3);
 
 	for (int i = 0; i<particles.size(); i++) {
 		Particle* particle = &particles[i];
@@ -225,6 +225,7 @@ void ParticleFilter::move_particle() {
 
 		particle->x = particle->x + dx;
 		particle->y = particle->y + dy;
+		particle->scale = distribution_scale(generator);
 
 		if (particle->x <= 0) particle->x = 0;
 		if (particle->x >= image_width) particle->x = image_width - 1;

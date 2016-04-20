@@ -31,11 +31,14 @@ void CallBackFunc(int event, int x, int y, int flags, void* userdata)
 		X2 = x;
 		Y2 = y;
 
-		if (mFilter == NULL)
-			mFilter = new ParticleFilter(frame.cols, frame.rows);
+		if (mFilter == NULL) {
+			//mFilter = new ParticleFilter(frame.cols, frame.rows);
+			mFilter = new ParticleFilter(X1, Y1, X2 - X1, Y2 - Y1);
+		}
 		else {
 			delete mFilter;
-			mFilter = new ParticleFilter(frame.cols, frame.rows);
+			//mFilter = new ParticleFilter(frame.cols, frame.rows);
+			mFilter = new ParticleFilter(X1, Y1, X2 - X1, Y2 - Y1);
 		}
 		mFilter->initialization(X1, Y1, X2, Y2, frame);
 	}
@@ -49,7 +52,7 @@ int main(void)
 
 	srand(time(NULL));
 
-	capture.open(0);
+	capture.open("C:/Users/TH WU/Downloads/seqD/Vid_D_person.avi");
 	if (!capture.isOpened()) { printf("--(!)Error opening video capture\n"); return -1; }
 
 	//test!!!
@@ -64,7 +67,8 @@ int main(void)
 		}
 
 		if (mFilter != NULL && mFilter->ready) {
-			pyrDown(pre_frame, frame, Size(pre_frame.cols / 2, pre_frame.rows / 2));
+			//pyrDown(pre_frame, frame, Size(pre_frame.cols / 2, pre_frame.rows / 2));
+			frame = pre_frame;
 
 			Mat gray;
 			cvtColor(frame, gray, CV_BGR2GRAY);
@@ -76,7 +80,8 @@ int main(void)
 			//pyrUp(frame, frame);
 		}
 		else {
-			pyrDown(pre_frame, frame, Size(pre_frame.cols / 2, pre_frame.rows / 2));
+			//pyrDown(pre_frame, frame, Size(pre_frame.cols / 2, pre_frame.rows / 2));
+			frame = pre_frame;
 		}
 
 		//test
