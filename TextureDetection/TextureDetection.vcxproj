@@ -112,12 +112,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="lbp.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Particle.cpp" />
     <ClCompile Include="ParticleFilter.cpp" />
     <ClCompile Include="RandomGenerator.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="lbp.h" />
     <ClInclude Include="Particle.h" />
     <ClInclude Include="ParticleFilter.h" />
     <ClInclude Include="RandomGenerator.h" />

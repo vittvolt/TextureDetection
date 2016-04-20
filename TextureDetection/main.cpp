@@ -10,9 +10,8 @@ using namespace std;
 using namespace cv;
 
 int X1, X2, Y1, Y2;
-bool set = false;
 ParticleFilter* mFilter = NULL;
-Mat frame;
+Mat frame, pre_frame;
 
 //FYP Report
 bool stuck = true;
@@ -38,18 +37,7 @@ void CallBackFunc(int event, int x, int y, int flags, void* userdata)
 			delete mFilter;
 			mFilter = new ParticleFilter(frame.cols, frame.rows);
 		}
-		mFilter->tracking_window_width = X2 - X1;
-		mFilter->tracking_window_height = Y2 - Y1;
-		mFilter->initial_tracking_window_width = X2 - X1;
-		mFilter->initial_tracking_window_height = Y2 - Y1;
-		mFilter->image_width = frame.cols;
-		mFilter->image_height = frame.rows;
-		mFilter->calculate_particles_xy_mean();
-		mFilter->mean_x_in_previous_frame = mFilter->mean_x;
-		mFilter->mean_y_in_previous_frame = mFilter->mean_y;
-		mFilter->set_from_initial_frame(frame, X1, Y1, X2, Y2);
-
-		set = true;
+		mFilter->initialization(X1, Y1, X2, Y2, frame);
 	}
 }
 
@@ -64,21 +52,44 @@ int main(void)
 	capture.open(0);
 	if (!capture.isOpened()) { printf("--(!)Error opening video capture\n"); return -1; }
 
-	while (capture.read(frame))
+	//test!!!
+
+	lbp_init(false);
+	while (capture.read(pre_frame))
 	{
-		if (frame.empty())
+		if (pre_frame.empty())
 		{
 			printf(" --(!) No captured frame -- Break!");
 			break;
 		}
 
-		if (mFilter != NULL && set) {
-			mFilter->on_newFrame(&frame);
+		if (mFilter != NULL && mFilter->ready) {
+			pyrDown(pre_frame, frame, Size(pre_frame.cols / 2, pre_frame.rows / 2));
+
+			Mat gray;
+			cvtColor(frame, gray, CV_BGR2GRAY);
+			Mat lbp;
+			lbp_from_gray(gray, lbp);
+
+			mFilter->on_newFrame(&frame, lbp);
+
+			//pyrUp(frame, frame);
 		}
+		else {
+			pyrDown(pre_frame, frame, Size(pre_frame.cols / 2, pre_frame.rows / 2));
+		}
+
+		//test
+		/*pyrDown(frame, frame, Size(frame.cols / 2, frame.rows / 2));
+		Mat gray;
+		cvtColor(frame, gray, CV_RGB2GRAY);
+		Mat lbp;
+		lbp_from_gray(gray, lbp); 
+		pyrUp(frame, frame, Size(lbp.cols * 2, lbp.rows * 2)); */
 
 		imshow("Video", frame);
 
-		int c = waitKey(25);
+		int c = waitKey(20);
 		if ((char)c == 27) { break; } // escape
 	}
 	capture.release();

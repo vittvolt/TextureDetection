@@ -12,13 +12,13 @@ ParticleFilter::ParticleFilter(int X, int Y, int Width, int Height) {
 	}
 }
 
-void ParticleFilter::on_newFrame(Mat* m) {
+void ParticleFilter::on_newFrame(Mat* m, Mat& lbp) {
 	double weights_sum = 0;
 	double max_raw_weight = 0;
 
 	for (int i = 0; i < particles.size(); i++) {
 		Particle* p = &particles[i];
-		double weight = calc_weight_for_particle(p, *m);
+		double weight = calc_weight_for_particle(p, *m, lbp);
 		p->weight = weight;
 		weights_sum += weight;
 
@@ -83,24 +83,25 @@ void ParticleFilter::on_newFrame(Mat* m) {
 	Mat submat = temp(rect);
 	vector<Mat> bgr_channels(3);
 	split(submat, bgr_channels);
-
-	//initial_frame_hist_b = calculate_histogram(bgr_channels[0]);
-	//initial_frame_hist_g = calculate_histogram(bgr_channels[1]);
-	//initial_frame_hist_r = calculate_histogram(bgr_channels[2]);
-
 }
 
-void ParticleFilter::set_from_initial_frame(Mat m, int x1, int y1, int x2, int y2) {
+void ParticleFilter::set_from_initial_frame(Mat& m, Mat& lbp, int x1, int y1, int x2, int y2) {
 	vector<Mat> bgr_channels(3);
 
 	//Important!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	Rect rect(Point(x1, y1), Point(x2, y2));
-	Mat submat = m(rect);
-	split(submat, bgr_channels);
+	rect = rect & Rect(0, 0, m.cols, m.rows);
+	//Mat submat = m(rect);
+	/*split(submat, bgr_channels);
 
 	initial_frame_hist_b = calculate_histogram(bgr_channels[0]);
 	initial_frame_hist_g = calculate_histogram(bgr_channels[1]);
 	initial_frame_hist_r = calculate_histogram(bgr_channels[2]);
+
+	//lbp
+	initial_lbp_hist = lbp_opencv_histogram(submat); */
+	
+	initial_total_hist = calc_hist_rgb_lbp(&m, lbp, rect);
 }
 
 Mat ParticleFilter::calculate_histogram(Mat m) {
@@ -130,7 +131,7 @@ void ParticleFilter::calculate_particles_xy_mean() {
 	mean_y = mean_y / particles.size();
 }
 
-double ParticleFilter::calc_weight_for_particle(Particle* p, Mat m) {
+double ParticleFilter::calc_weight_for_particle(Particle* p, Mat& m, Mat& lbp) {
 	double weight;
 	int x = (int)(p->x + 0.5);
 	int y = (int)(p->y + 0.5);
@@ -138,12 +139,7 @@ double ParticleFilter::calc_weight_for_particle(Particle* p, Mat m) {
 	int x_end = x + tracking_window_width;
 	int y_end = y + tracking_window_height;
 
-	/*if (x_end >= image_width) x_end = image_width - 1;
-	if (y_end >= image_height) y_end = image_height - 1;
-	if (x < 0) { x = 0; }
-	if (y < 0) { y = 0; } */
-
-	if (x_end <= x || y_end <= y) {
+	if (x_end <= x || y_end <= y || x_end > m.cols * 1.1 || y_end > m.rows * 1.1) {
 		return 0;
 	}
 
@@ -151,19 +147,24 @@ double ParticleFilter::calc_weight_for_particle(Particle* p, Mat m) {
 	//Limit the rect size within the boundary of the image
 	rect = rect & Rect(0, 0, m.cols, m.rows);
 
-	Mat submat = m(rect);
-	vector<Mat> bgr_channels(3);
+	/*vector<Mat> bgr_channels(3);
 	split(submat, bgr_channels);
 
 	Mat hist_b = calculate_histogram(bgr_channels[0]);
 	Mat hist_g = calculate_histogram(bgr_channels[1]);
 	Mat hist_r = calculate_histogram(bgr_channels[2]);
+	Mat hist_lbp = lbp_opencv_histogram(submat);
 
 	double correlation_b = compareHist(hist_b, initial_frame_hist_b, 0);
 	double correlation_g = compareHist(hist_g, initial_frame_hist_g, 0);
 	double correlation_r = compareHist(hist_r, initial_frame_hist_r, 0);
 
-	double par = 0.33 * (correlation_b + correlation_g + correlation_r);
+	//lbp
+	double correlation_lbp = compareHist(hist_lbp, initial_lbp_hist, 0); */
+
+	//double par = 0.25 * (correlation_b + correlation_g + correlation_r) + 0.25 * correlation_lbp;
+	Mat hist = calc_hist_rgb_lbp(&m, lbp, rect);
+	double par = compareHist(hist, initial_total_hist, 0);
 	weight = exp(-16 * (1 - par));
 
 	return weight;
@@ -213,11 +214,14 @@ Particle* ParticleFilter::get_new_particle(vector<double> weighted_distribution)
 }
 
 void ParticleFilter::move_particle() {
+	normal_distribution<double> distribution(0, 10);
 
 	for (int i = 0; i<particles.size(); i++) {
 		Particle* particle = &particles[i];
-		double dx = 50 * ((double)rand() / (double)RAND_MAX) - 25.0;
-		double dy = 50 * ((double)rand() / (double)RAND_MAX) - 25.0;
+		//double dx = 20 * ((double)rand() / (double)RAND_MAX) - 10.0;
+		//double dy = 20 * ((double)rand() / (double)RAND_MAX) - 10.0;
+		double dx = distribution(generator);
+		double dy = distribution(generator);
 
 		particle->x = particle->x + dx;
 		particle->y = particle->y + dy;
@@ -241,6 +245,34 @@ void ParticleFilter::set_tracking_window(int w, int h) {
 
 void ParticleFilter::background_task(Mat* m) {
 	
+}
+
+void ParticleFilter::initialization(int X1, int Y1, int X2, int Y2, Mat& frame) {
+	ready = false;
+
+	lbp_init(false);
+	
+	roi_width = X2 - X1;
+	roi_height = Y2 - Y1;
+
+	tracking_window_width = X2 - X1;
+	tracking_window_height = Y2 - Y1;
+	initial_tracking_window_width = X2 - X1;
+	initial_tracking_window_height = Y2 - Y1;
+	image_width = frame.cols;
+	image_height = frame.rows;
+	calculate_particles_xy_mean();
+	mean_x_in_previous_frame = mean_x;
+	mean_y_in_previous_frame = mean_y;
+
+	Mat gray;
+	cvtColor(frame, gray, CV_BGR2GRAY);
+	Mat lbp;
+	lbp_from_gray(gray, lbp);
+
+	set_from_initial_frame(frame, lbp, X1, Y1, X2, Y2);
+
+	ready = true;
 }
 
 
