@@ -9,4 +9,5 @@ public:
 	Particle();
 	Particle(int, int);
 	Particle(int, int, int, int);
+	Particle(int, int, bool);
 };

@@ -12,7 +12,7 @@ using namespace cv;
 
 class ParticleFilter {
 public:
-	const int NUMBER_OF_PARTICLES = 100;
+	const int NUMBER_OF_PARTICLES = 70;
 	int step = 0;
 	vector<Particle> particles;
 	bool ready = false;
@@ -22,6 +22,7 @@ public:
 	Mat initial_frame_hist_g;
 	Mat initial_frame_hist_r;
 	Mat initial_lbp_hist;
+	Mat initial_rgb_hist;
 	Mat initial_total_hist;
 
 	int image_width, image_height;

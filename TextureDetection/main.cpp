@@ -13,9 +13,11 @@ int X1, X2, Y1, Y2;
 ParticleFilter* mFilter = NULL;
 Mat frame, pre_frame;
 
-//FYP Report
+String cup = "C:/Users/TH WU/Downloads/seqB/Vid_B_cup.avi";
+String ball = "C:/Users/TH WU/Downloads/seqA/Vid_A_ball.avi";
+String person = "C:/Users/TH WU/Downloads/seqD/Vid_D_person.avi";
+String persons = "C:/Users/TH WU/Downloads/seqI/Vid_I_person_crossing.avi";
 bool stuck = true;
-int output_counter = 1;
 
 void CallBackFunc(int event, int x, int y, int flags, void* userdata)
 {
@@ -33,12 +35,13 @@ void CallBackFunc(int event, int x, int y, int flags, void* userdata)
 
 		if (mFilter == NULL) {
 			//mFilter = new ParticleFilter(frame.cols, frame.rows);
-			mFilter = new ParticleFilter(X1, Y1, X2 - X1, Y2 - Y1);
+			mFilter = new ParticleFilter((X1+X2)/2, (Y1+Y2)/2, (X2 - X1)/2, (Y2 - Y1)/2);
 		}
 		else {
 			delete mFilter;
 			//mFilter = new ParticleFilter(frame.cols, frame.rows);
-			mFilter = new ParticleFilter(X1, Y1, X2 - X1, Y2 - Y1);
+			//mFilter = new ParticleFilter(X1, Y1, X2 - X1, Y2 - Y1);
+			mFilter = new ParticleFilter((X1 + X2) / 2, (Y1 + Y2) / 2, (X2 - X1) / 2, (Y2 - Y1) / 2);
 		}
 		mFilter->initialization(X1, Y1, X2, Y2, frame);
 	}
@@ -52,7 +55,7 @@ int main(void)
 
 	srand(time(NULL));
 
-	capture.open("C:/Users/TH WU/Downloads/seqD/Vid_D_person.avi");
+	capture.open(person);
 	if (!capture.isOpened()) { printf("--(!)Error opening video capture\n"); return -1; }
 
 	//test!!!
@@ -84,18 +87,17 @@ int main(void)
 			frame = pre_frame;
 		}
 
-		//test
-		/*pyrDown(frame, frame, Size(frame.cols / 2, frame.rows / 2));
-		Mat gray;
-		cvtColor(frame, gray, CV_RGB2GRAY);
-		Mat lbp;
-		lbp_from_gray(gray, lbp); 
-		pyrUp(frame, frame, Size(lbp.cols * 2, lbp.rows * 2)); */
-
 		imshow("Video", frame);
 
 		int c = waitKey(20);
 		if ((char)c == 27) { break; } // escape
+
+		if (stuck) {
+
+			for (time_t t = time(0) + 8; time(0) < t; ) {}
+
+			stuck = false;
+		}
 	}
 	capture.release();
 	cvDestroyAllWindows();

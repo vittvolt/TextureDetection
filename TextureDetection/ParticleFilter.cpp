@@ -71,10 +71,18 @@ void ParticleFilter::on_newFrame(Mat* m, Mat& lbp) {
 		Particle* p = &particles[i];
 		line(*m, Point(p->x, p->y), Point(p->x, p->y), Scalar(0, 255, 0), 7);
 	}
+
+	//Update the histogram
+	/*double x2 = mean_x + tracking_window_width * (1 + mean_scale);
+	double y2 = mean_y + tracking_window_height * (1 + mean_scale);
+	Rect rect(Point(mean_x, mean_y), Point(floor(x2+0.5), floor(y2+0.5)));
+	rect = rect & Rect(0, 0, image_width, image_height);
+
+	initial_total_hist = 0.9 * initial_total_hist + 0.1 * calc_hist_rgb_lbp(m, lbp, rect);*/
 }
 
 void ParticleFilter::set_from_initial_frame(Mat& m, Mat& lbp, int x1, int y1, int x2, int y2) {
-	vector<Mat> bgr_channels(3);
+	//vector<Mat> bgr_channels(3);
 
 	//Important!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	Rect rect(Point(x1, y1), Point(x2, y2));
@@ -89,7 +97,9 @@ void ParticleFilter::set_from_initial_frame(Mat& m, Mat& lbp, int x1, int y1, in
 	//lbp
 	initial_lbp_hist = lbp_opencv_histogram(submat); */
 	
-	initial_total_hist = calc_hist_rgb_lbp(&m, lbp, rect);
+	//initial_total_hist = calc_hist_rgb_lbp(&m, lbp, rect);
+	initial_rgb_hist = calc_hist_rgb(&m, rect);
+	initial_lbp_hist = lbp_spatial_histogram(lbp, 4, 4);
 }
 
 Mat ParticleFilter::calculate_histogram(Mat m) {
@@ -159,8 +169,13 @@ double ParticleFilter::calc_weight_for_particle(Particle* p, Mat& m, Mat& lbp) {
 	double correlation_lbp = compareHist(hist_lbp, initial_lbp_hist, 0); */
 
 	//double par = 0.25 * (correlation_b + correlation_g + correlation_r) + 0.25 * correlation_lbp;
-	Mat hist = calc_hist_rgb_lbp(&m, lbp, rect);
+	/*Mat hist = calc_hist_rgb_lbp(&m, lbp, rect);
 	double par = compareHist(hist, initial_total_hist, 0);
+	weight = exp(-16 * (1 - par)); */
+
+	Mat rgb = calc_hist_rgb(&m, rect);
+	Mat l = lbp_spatial_histogram(lbp, 4, 4);
+	double par = 0.6 * compareHist(rgb, initial_rgb_hist, 0) + 0.4 * compareHist(l, initial_lbp_hist, 0);
 	weight = exp(-16 * (1 - par));
 
 	return weight;

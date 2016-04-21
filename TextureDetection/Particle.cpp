@@ -25,3 +25,10 @@ Particle::Particle(int X, int Y, int radius_x, int radius_y) {
 	y = Y + t2 * radius_y - radius_y;
 	weight = 1;
 }
+
+Particle::Particle(int X, int Y, bool fixed) {
+	x = X;
+	y = Y;
+	scale = 0;
+	weight = 1;
+}

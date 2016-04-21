@@ -125,13 +125,13 @@ Mat lbp_histogram(const Mat& src, const Rect& selection, bool norm)
 Mat lbp_opencv_histogram(Mat& m) {
 	Mat hist;
 
-	Mat gray_submat, lbp_roi;
-	cvtColor(m, gray_submat, CV_RGB2GRAY);
-	lbp_from_gray(gray_submat, lbp_roi);
+	//Mat gray_submat, lbp_roi;
+	//cvtColor(m, gray_submat, CV_RGB2GRAY);
+	//lbp_from_gray(gray_submat, lbp_roi);
 	float r[] = { 0, lbp_num_patterns() };
 	const float* lbpRanges = { r };
 	int histS = lbp_num_patterns();
-	calcHist(&lbp_roi, 1, 0, Mat(), hist, 1, &histS, &lbpRanges, true, false);
+	calcHist(&m, 1, 0, Mat(), hist, 1, &histS, &lbpRanges, true, false);
 
 	return hist;
 }
@@ -157,4 +157,53 @@ Mat calc_hist_rgb_lbp(Mat* m, Mat& lbp, Rect& roi) {
 
 	calcHist(srcs, sizeof(srcs), channels, mask, hist, dims, hist_size, ranges, true, false);
 	return hist;
+}
+
+Mat calc_hist_rgb(Mat* m, Rect& roi) {
+	Mat hist;
+	Mat submat(*m, roi);
+	static const int channels[] = { 0, 1, 2 };
+	static const int b_bins = 8;
+	static const int g_bins = 8;
+	static const int r_bins = 8;
+	static const int hist_size[] = { b_bins, g_bins, r_bins};
+	static const float branges[] = { 0, 255 };
+	static const float granges[] = { 0, 255 };
+	static const float rranges[] = { 0, 255 };
+	static const float* ranges[] = { branges, granges, rranges};
+	static const Mat mask;
+	static const int dims = 3;
+	Mat srcs[] = { submat };
+
+	calcHist(srcs, sizeof(srcs), channels, mask, hist, dims, hist_size, ranges, true, false);
+	return hist;
+}
+
+Mat lbp_spatial_histogram(InputArray _src, int grid_x, int grid_y) {
+	Mat src = _src.getMat();
+	// calculate LBP patch size
+	int width = src.cols / grid_x;
+	int height = src.rows / grid_y;
+	// allocate memory for the spatial histogram
+	Mat result = Mat::zeros(grid_x * grid_y, lbp_num_patterns(), CV_32FC1);
+	// return matrix with zeros if no data was given
+	if (src.empty())
+		return result.reshape(1, 1);
+	// initial result_row
+	int resultRowIdx = 0;
+	// iterate through grid
+	for (int i = 0; i < grid_y; i++) {
+		for (int j = 0; j < grid_x; j++) {
+			Mat src_cell = Mat(src, Range(i*height, (i + 1)*height), Range(j*width, (j + 1)*width));
+			//Mat cell_hist = histc(src_cell, 0, (numPatterns - 1), true);
+			Mat cell_hist = lbp_opencv_histogram(src_cell);
+			// copy to the result matrix
+			Mat result_row = result.row(resultRowIdx);
+			cell_hist.reshape(1, 1).convertTo(result_row, CV_32FC1);
+			// increase row count in result matrix
+			resultRowIdx++;
+		}
+	}
+	// return result as reshaped feature vector
+	return result.reshape(1, 1);
 }
