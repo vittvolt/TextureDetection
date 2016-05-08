@@ -55,10 +55,19 @@ int main(void)
 
 	srand(time(NULL));
 
-	capture.open(person);
+	capture.open(persons);
 	if (!capture.isOpened()) { printf("--(!)Error opening video capture\n"); return -1; }
 
 	//test!!!
+	/*capture.read(frame);
+	cvtColor(frame, frame, CV_BGR2GRAY);
+	
+	Mat lbp;
+	lbp_init(false);
+	lbp_from_gray(frame, lbp);
+	imwrite("C:/Users/TH WU/Dropbox/FYP Documents/ppt_frame.jpg", frame);
+	imwrite("C:/Users/TH WU/Dropbox/FYP Documents/ppt_lbp.jpg", lbp); */
+
 
 	lbp_init(false);
 	while (capture.read(pre_frame))

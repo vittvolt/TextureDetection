@@ -228,8 +228,8 @@ Particle* ParticleFilter::get_new_particle(vector<double> weighted_distribution)
 }
 
 void ParticleFilter::move_particle() {
-	normal_distribution<double> distribution(0, 10);
-	normal_distribution<double> distribution_scale(0, 0.3);
+	normal_distribution<double> distribution(0, 8);
+	normal_distribution<double> distribution_scale(0, 0.6);
 
 	for (int i = 0; i<particles.size(); i++) {
 		Particle* particle = &particles[i];
