@@ -1,5 +1,7 @@
 #include "lbp.h"
 
+using namespace cv;
+
 void lbp_init(bool uniform)
 {
 	if (uniform)

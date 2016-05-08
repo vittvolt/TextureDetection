@@ -1,5 +1,7 @@
 #include "ParticleFilter.h"
 
+using namespace cv;
+
 ParticleFilter::ParticleFilter(int Width, int Height) {
 	for (int i = 0; i < NUMBER_OF_PARTICLES; i++) {
 		particles.push_back(Particle(Width, Height));
@@ -229,7 +231,7 @@ Particle* ParticleFilter::get_new_particle(vector<double> weighted_distribution)
 
 void ParticleFilter::move_particle() {
 	normal_distribution<double> distribution(0, 8);
-	normal_distribution<double> distribution_scale(0, 0.6);
+	normal_distribution<double> distribution_scale(0, 0.4);
 
 	for (int i = 0; i<particles.size(); i++) {
 		Particle* particle = &particles[i];
